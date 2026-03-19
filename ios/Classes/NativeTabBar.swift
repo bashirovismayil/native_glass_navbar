@@ -144,7 +144,6 @@ class LiquidGlassTabBarController: UITabBarController, UITabBarControllerDelegat
                 // ===== EKLENEN: hide/show komutları =====
                 if call.method == "hide" {
                         self.view.isHidden = true
-                        self.view.alpha = 0
                         result(nil)
                         return
                 }
@@ -152,7 +151,6 @@ class LiquidGlassTabBarController: UITabBarController, UITabBarControllerDelegat
                 if call.method == "show" {
                         configureAppearance()
                         updateSelectionAndColors()
-                        self.view.alpha = 1.0
                         self.view.isHidden = false
                         result(nil)
                         return
