@@ -142,9 +142,12 @@ class LiquidGlassTabBarController: UITabBarController, UITabBarControllerDelegat
 
         private func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
                 // ===== EKLENEN: hide/show komutları =====
-                if call.method == "hide" {
+                if call.method == "hide" if call.method == "hide" {
+    self.view.frame = self.view.frame.offsetBy(dx: 0, dy: 1000)
+    result(nil)
+    return
+}{
                         self.view.isHidden = true
-                        self.view.alpha = 0
                         result(nil)
                         return
                 }
@@ -153,9 +156,6 @@ class LiquidGlassTabBarController: UITabBarController, UITabBarControllerDelegat
                         configureAppearance()
                         updateSelectionAndColors()
                         self.view.isHidden = false
-                        UIView.animate(withDuration: 0.15, delay: 0, options: .curveEaseIn) {
-                                self.view.alpha = 1.0
-                        }
                         result(nil)
                         return
                 }
@@ -193,7 +193,7 @@ class LiquidGlassTabBarController: UITabBarController, UITabBarControllerDelegat
 
                 // Find the action button (Tag 99)
                 if let actionVC = vcs.first(where: { $0.tabBarItem.tag == 99 }) {
-                        actionVC.tabBarItem.image = UIImage(namedsystemName: config.actionButtonSymbol)
+                        actionVC.tabBarItem.image = UIImage(named: config.actionButtonSymbol)
                 }
         }
 
@@ -211,7 +211,7 @@ class LiquidGlassTabBarController: UITabBarController, UITabBarControllerDelegat
 
                         dummyVC.tabBarItem = UITabBarItem(
                                 title: label,
-                                image: UIImage(named:symbolName) ame: symbolName),
+                                image: UIImage(named: symbolName),
                                 tag: i
                         )
                         controllers.append(dummyVC)
@@ -223,7 +223,7 @@ class LiquidGlassTabBarController: UITabBarController, UITabBarControllerDelegat
                         actionVC.view.backgroundColor = .clear
 
                         let item = UITabBarItem(tabBarSystemItem: .search, tag: 99)
-                        item.image = UIImage(systemName: config.actionButtonSymbol)
+                        item.image = UIImage(named: config.actionButtonSymbol)
 
                         actionVC.tabBarItem = item
                         controllers.append(actionVC)
