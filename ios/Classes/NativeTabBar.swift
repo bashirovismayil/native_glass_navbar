@@ -119,8 +119,8 @@ class LiquidGlassTabBarController: UITabBarController, UITabBarControllerDelegat
 
         private func configureAppearance() {
                 let appearance = UITabBarAppearance()
-                appearance.configureWithDefaultBackground()
-                appearance.backgroundColor = .clear
+                appearance.configureWithOpaqueBackground()
+                appearance.backgroundColor = .white
                 appearance.shadowColor = .clear
 
                 let itemAppearance = UITabBarItemAppearance()
