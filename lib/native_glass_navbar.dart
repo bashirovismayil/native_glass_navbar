@@ -1,4 +1,11 @@
-/// A Flutter plugin that provides a native liquid glass navigation bar for iOS.
+/// Forked: hide/show method channel desteği eklendi.
+///
+/// Orijinal: https://pub.dev/packages/native_glass_navbar
+/// Değişiklikler:
+///   - NativeGlassNavBarState artık public (GlobalKey erişimi için)
+///   - hide() ve show() metotları eklendi
+///   - FutureBuilder waiting durumunda fallback gösteriliyor
+
 library native_glass_navbar;
 
 export 'liquid_glass_helper.dart';
@@ -9,62 +16,26 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:native_glass_navbar/liquid_glass_helper.dart';
 
-/// Represents a tab item in the [NativeGlassNavBar].
 class NativeGlassNavBarItem {
-  /// The label text to display for the tab.
   final String label;
-
-  /// The SF Symbol name to use for the tab icon.
   final String symbol;
-
-  /// Creates a new [NativeGlassNavBarItem].
   const NativeGlassNavBarItem({required this.label, required this.symbol});
 }
 
-/// Represents an action button in the [NativeGlassNavBar].
-///
-/// It appears to the right of the tab as a circular floating button.
 class TabBarActionButton {
-  /// The SF Symbol name to use for the action button icon.
   final String symbol;
-
-  /// The callback to be invoked when the action button is tapped.
   final VoidCallback onTap;
-
-  /// Creates a new [TabBarActionButton].
   const TabBarActionButton({required this.symbol, required this.onTap});
 }
 
-/// A widget that displays a native glass liquid navigation bar on iOS.
-///
-/// On non-iOS platforms or when the glass effect is not supported,
-/// it can optionally display a [fallback] widget.
 class NativeGlassNavBar extends StatefulWidget {
-  /// The list of tabs to display in the navigation bar.
-  ///
-  /// If [actionButton] is provided, supports up to 4 tabs, else supports up to 5 tabs.
   final List<NativeGlassNavBarItem> tabs;
-
-  /// An optional action button.
-  ///
-  /// If provided, the action button appears to the right of the tabs as a circular floating button.
   final TabBarActionButton? actionButton;
-
-  /// The index of the currently selected tab.
   final int currentIndex;
-
-  /// A callback that is called when a tab is tapped.
   final ValueChanged<int> onTap;
-
-  /// The color to use for the selected tab icon and label.
-  ///
-  /// If null, defaults to the primary color of the current [Theme].
   final Color? tintColor;
-
-  /// A widget to display when the native glass effect is not supported.
   final Widget? fallback;
 
-  /// Creates a new [NativeGlassNavBar].
   const NativeGlassNavBar({
     super.key,
     required this.tabs,
@@ -81,12 +52,45 @@ class NativeGlassNavBar extends StatefulWidget {
        );
 
   @override
-  State<NativeGlassNavBar> createState() => _NativeGlassNavBarState();
+  // ignore: library_private_types_in_public_api — intentional for GlobalKey access
+  NativeGlassNavBarState createState() => NativeGlassNavBarState();
 }
 
-class _NativeGlassNavBarState extends State<NativeGlassNavBar> {
+/// Public state — GlobalKey<NativeGlassNavBarState> ile dışarıdan erişilebilir.
+class NativeGlassNavBarState extends State<NativeGlassNavBar> {
   MethodChannel? _channel;
   late Future<bool> _supportLiquidGlassFuture;
+  bool _isHidden = false;
+
+  // ========================
+  // PUBLIC API — hide / show
+  // ========================
+
+  /// Native navbar'ı anında gizler.
+  /// Başka bir sayfaya push yapmadan hemen önce çağır.
+  Future<void> hide() async {
+    if (_channel != null && !_isHidden) {
+      _isHidden = true;
+      try {
+        await _channel!.invokeMethod('hide');
+      } catch (_) {}
+    }
+  }
+
+  /// Native navbar'ı yumuşak fade-in ile gösterir.
+  /// Pop ile geri döndükten sonra çağır.
+  Future<void> show() async {
+    if (_channel != null && _isHidden) {
+      _isHidden = false;
+      try {
+        await _channel!.invokeMethod('show');
+      } catch (_) {}
+    }
+  }
+
+  // ========================
+  // INTERNAL
+  // ========================
 
   void _updateNativeView() {
     if (_channel != null) {
@@ -98,7 +102,6 @@ class _NativeGlassNavBarState extends State<NativeGlassNavBar> {
     if (defaultTargetPlatform != TargetPlatform.iOS) {
       return false;
     }
-
     return await LiquidGlassHelper.isLiquidGlassSupported();
   }
 
@@ -132,7 +135,11 @@ class _NativeGlassNavBarState extends State<NativeGlassNavBar> {
     return FutureBuilder<bool>(
       future: _supportLiquidGlassFuture,
       builder: (context, snapshot) {
+        // FIX: Bekleme sırasında fallback göster — gecikme hissedilmez
         if (snapshot.connectionState == ConnectionState.waiting) {
+          if (widget.fallback != null) {
+            return widget.fallback!;
+          }
           return const SizedBox.shrink();
         }
 
@@ -140,7 +147,6 @@ class _NativeGlassNavBarState extends State<NativeGlassNavBar> {
           if (widget.fallback != null) {
             return widget.fallback!;
           }
-
           if (kDebugMode) {
             developer.log(
               'Liquid glass effect is not supported on this device. '
@@ -153,8 +159,7 @@ class _NativeGlassNavBarState extends State<NativeGlassNavBar> {
         }
 
         final bottomPadding = MediaQuery.of(context).padding.bottom;
-        // Standard tab bar height is 49. Add bottom padding for safe area.
-        final height = 49.0 + bottomPadding;
+        final height = 40.0 + bottomPadding;
 
         return SizedBox(
           height: height,
@@ -169,7 +174,6 @@ class _NativeGlassNavBarState extends State<NativeGlassNavBar> {
                   final index = call.arguments['index'] as int;
                   widget.onTap(index);
                 }
-
                 if (call.method == 'actionButtonPressed') {
                   widget.actionButton?.onTap();
                 }
