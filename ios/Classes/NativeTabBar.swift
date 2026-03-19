@@ -143,16 +143,13 @@ class LiquidGlassTabBarController: UITabBarController, UITabBarControllerDelegat
         private func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         
                 if call.method == "hide" {
-                    self.view.isHidden = true
+                    self.view.frame = self.view.frame.offsetBy(dx: 0, dy: 1000)
                     result(nil)
                     return
                 }
 
                 if call.method == "show" {
-                    configureAppearance()B
-                    updateSelectionAndColors()
-                    self.view.alpha = 1.0
-                    self.view.isHidden = false
+                    self.view.frame = self.view.frame.offsetBy(dx: 0, dy: -1000)
                     result(nil)
                     return
                 }
