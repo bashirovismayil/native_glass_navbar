@@ -152,10 +152,8 @@ class LiquidGlassTabBarController: UITabBarController, UITabBarControllerDelegat
                 if call.method == "show" {
                         configureAppearance()
                         updateSelectionAndColors()
+                        self.view.alpha = 1.0
                         self.view.isHidden = false
-                        UIView.animate(withDuration: 0.15, delay: 0, options: .curveEaseIn) {
-                                self.view.alpha = 1.0
-                        }
                         result(nil)
                         return
                 }
