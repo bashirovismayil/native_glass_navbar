@@ -203,11 +203,13 @@ class LiquidGlassTabBarController: UITabBarController, UITabBarControllerDelegat
                         let symbolName = i < config.symbols.count ? config.symbols[i] : "questionmark"
                         let label = i < config.labels.count ? config.labels[i] : ""
 
-                        dummyVC.tabBarItem = UITabBarItem(
-                                title: label,
-                                image: UIImage(named: symbolName),
-                                tag: i
-                        )
+                    let originalImage = UIImage(named: symbolName)
+                    let scaledImage = originalImage?.scaled(toHeight: 25)
+                    dummyVC.tabBarItem = UITabBarItem(
+                        title: label,
+                        image: scaledImage,
+                        tag: i
+                    )
                         controllers.append(dummyVC)
                 }
 
@@ -265,4 +267,15 @@ class LiquidGlassTabBarController: UITabBarController, UITabBarControllerDelegat
                         channel.invokeMethod("valueChanged", arguments: ["index": tag])
                 }
         }
+}
+extension UIImage {
+    func scaled(toHeight targetHeight: CGFloat) -> UIImage {
+        let scale = targetHeight / self.size.height
+        let newWidth = self.size.width * scale
+        let newSize = CGSize(width: newWidth, height: targetHeight)
+        let renderer = UIGraphicsImageRenderer(size: newSize)
+        return renderer.image { _ in
+            self.draw(in: CGRect(origin: .zero, size: newSize))
+        }.withRenderingMode(.alwaysTemplate)
+    }
 }
