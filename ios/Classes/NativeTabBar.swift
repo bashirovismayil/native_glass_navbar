@@ -180,7 +180,13 @@ class LiquidGlassTabBarController: UITabBarController, UITabBarControllerDelegat
                                 // A. Update Colors
                                 updateSelectionAndColors()
 
-                                // B. Update Symbol In-Place (Fixes Jank)
+                                // B. Update Tab Titles / Symbols In-Place (e.g. on locale change)
+                                if oldConfig.labels != newConfig.labels
+                                        || oldConfig.symbols != newConfig.symbols {
+                                        updateTitlesAndSymbolsInPlace()
+                                }
+
+                                // C. Update Action Symbol In-Place (Fixes Jank)
                                 if oldConfig.actionButtonSymbol != newConfig.actionButtonSymbol {
                                         updateActionSymbolInPlace()
                                 }
@@ -199,6 +205,33 @@ class LiquidGlassTabBarController: UITabBarController, UITabBarControllerDelegat
                 // Find the action button (Tag 99)
                 if let actionVC = vcs.first(where: { $0.tabBarItem.tag == 99 }) {
                         actionVC.tabBarItem.image = UIImage(named: config.actionButtonSymbol)
+                }
+        }
+
+        // Updates standard tab titles & icons without destroying the TabBarItems.
+        // Called on locale changes / label updates to avoid the jank of a full rebuild.
+        private func updateTitlesAndSymbolsInPlace() {
+                guard let vcs = self.viewControllers else { return }
+
+                var standardIndex = 0
+                for vc in vcs {
+                        // Skip the action button (Tag 99) — handled separately.
+                        if vc.tabBarItem.tag == 99 {
+                                continue
+                        }
+
+                        if standardIndex < config.labels.count {
+                                vc.tabBarItem.title = config.labels[standardIndex]
+                        }
+
+                        if standardIndex < config.symbols.count {
+                                let symbolName = config.symbols[standardIndex]
+                                let originalImage = UIImage(named: symbolName)
+                                let scaledImage = originalImage?.scaled(toHeight: 25)
+                                vc.tabBarItem.image = scaledImage
+                        }
+
+                        standardIndex += 1
                 }
         }
 
