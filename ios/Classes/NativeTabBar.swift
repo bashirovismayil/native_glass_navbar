@@ -127,6 +127,17 @@ class LiquidGlassTabBarController: UITabBarController, UITabBarControllerDelegat
                 itemAppearance.normal.iconColor = .systemGray
                 itemAppearance.selected.iconColor = config.tintColor
 
+                let normalTitleAttrs: [NSAttributedString.Key: Any] = [
+                        .foregroundColor: UIColor.systemGray,
+                        .font: UIFont.systemFont(ofSize: 10, weight: .medium),
+                ]
+                let selectedTitleAttrs: [NSAttributedString.Key: Any] = [
+                        .foregroundColor: config.tintColor,
+                        .font: UIFont.systemFont(ofSize: 10, weight: .semibold),
+                ]
+                itemAppearance.normal.titleTextAttributes = normalTitleAttrs
+                itemAppearance.selected.titleTextAttributes = selectedTitleAttrs
+
                 appearance.stackedLayoutAppearance = itemAppearance
                 appearance.inlineLayoutAppearance = itemAppearance
                 appearance.compactInlineLayoutAppearance = itemAppearance

@@ -159,7 +159,9 @@ class NativeGlassNavBarState extends State<NativeGlassNavBar> {
         }
 
         final bottomPadding = MediaQuery.of(context).padding.bottom;
-        final height = 40.0 + bottomPadding;
+        // Stacked layout (icon + title) needs ~49pt for the tab bar itself.
+        // We give it 56pt + safe-area so titles don't get clipped.
+        final height = 56.0 + bottomPadding;
 
         return SizedBox(
           height: height,
