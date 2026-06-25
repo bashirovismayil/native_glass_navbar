@@ -84,6 +84,12 @@ class LiquidGlassTabBarController: UITabBarController, UITabBarControllerDelegat
         private let channel: FlutterMethodChannel
         private var config: TabBarConfig
 
+        /// Desired visibility state. Kept as an absolute, idempotent flag so it
+        /// can be re-applied on every layout pass. This avoids the race where a
+        /// relative frame offset (the old approach) was reset by a Flutter-driven
+        /// relayout, leaving the bar permanently off-screen.
+        private var isBarHidden = false
+
         init(viewId: Int64, messenger: FlutterBinaryMessenger, args: Any?) {
                 self.channel = FlutterMethodChannel(
                         name: "NativeTabBar_\(viewId)",
@@ -115,6 +121,37 @@ class LiquidGlassTabBarController: UITabBarController, UITabBarControllerDelegat
         override func viewDidLayoutSubviews() {
                 super.viewDidLayoutSubviews()
                 self.view.backgroundColor = .clear
+                // Re-assert the hidden state on every layout pass. Flutter owns the
+                // platform view's frame and resets it whenever it relayouts the
+                // UiKitView; without this, a hidden bar could silently become
+                // visible (and later be pushed off-screen by `show`), which is the
+                // root cause of the "navbar sometimes doesn't appear" bug.
+                if isBarHidden {
+                        self.view.isHidden = true
+                        self.view.alpha = 0.0
+                }
+        }
+
+        /// Absolute, idempotent visibility toggle. Hiding removes the view from
+        /// rendering entirely (no glass-blur residue/artifacts during page
+        /// transitions); showing restores it with a soft fade-in.
+        private func setBarHidden(_ hidden: Bool, animated: Bool) {
+                isBarHidden = hidden
+                self.view.layer.removeAllAnimations()
+                if hidden {
+                        self.view.isHidden = true
+                        self.view.alpha = 0.0
+                } else {
+                        self.view.isHidden = false
+                        if animated {
+                                self.view.alpha = 0.0
+                                UIView.animate(withDuration: 0.2) {
+                                        self.view.alpha = 1.0
+                                }
+                        } else {
+                                self.view.alpha = 1.0
+                        }
+                }
         }
 
         private func configureAppearance() {
@@ -154,13 +191,13 @@ class LiquidGlassTabBarController: UITabBarController, UITabBarControllerDelegat
         private func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         
                 if call.method == "hide" {
-                    self.view.frame = self.view.frame.offsetBy(dx: 0, dy: 1000)
+                    setBarHidden(true, animated: false)
                     result(nil)
                     return
                 }
 
                 if call.method == "show" {
-                    self.view.frame = self.view.frame.offsetBy(dx: 0, dy: -1000)
+                    setBarHidden(false, animated: true)
                     result(nil)
                     return
                 }

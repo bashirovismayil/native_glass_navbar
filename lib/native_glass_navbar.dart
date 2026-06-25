@@ -68,24 +68,28 @@ class NativeGlassNavBarState extends State<NativeGlassNavBar> {
 
   /// Native navbar'ı anında gizler.
   /// Başka bir sayfaya push yapmadan hemen önce çağır.
+  ///
+  /// `_isHidden` yalnızca "istenen durum"u tutar; native taraf idempotent
+  /// olduğu için komutu her zaman göndeririz (çift çağrı zararsızdır). Bu,
+  /// flag ile gerçek native durumun birbirinden kopmasını (desync) engeller.
   Future<void> hide() async {
-    if (_channel != null && !_isHidden) {
-      _isHidden = true;
-      try {
-        await _channel!.invokeMethod('hide');
-      } catch (_) {}
-    }
+    _isHidden = true;
+    await _invokeVisibility('hide');
   }
 
   /// Native navbar'ı yumuşak fade-in ile gösterir.
   /// Pop ile geri döndükten sonra çağır.
   Future<void> show() async {
-    if (_channel != null && _isHidden) {
-      _isHidden = false;
-      try {
-        await _channel!.invokeMethod('show');
-      } catch (_) {}
-    }
+    _isHidden = false;
+    await _invokeVisibility('show');
+  }
+
+  Future<void> _invokeVisibility(String method) async {
+    final channel = _channel;
+    if (channel == null) return;
+    try {
+      await channel.invokeMethod(method);
+    } catch (_) {}
   }
 
   // ========================
@@ -180,6 +184,13 @@ class NativeGlassNavBarState extends State<NativeGlassNavBar> {
                   widget.actionButton?.onTap();
                 }
               });
+              // Platform view yeniden oluşturulmuş olabilir (locale değişimi,
+              // IndexedStack rebuild vb.). Native taraf taze/görünür başlar;
+              // istenen durum "gizli" ise bunu yeniden uygula, aksi halde
+              // bir sonraki show() bar'ı yanlışlıkla gizleyebilir.
+              if (_isHidden) {
+                _channel!.invokeMethod('hide');
+              }
             },
           ),
         );
