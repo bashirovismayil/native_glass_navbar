@@ -121,14 +121,17 @@ class LiquidGlassTabBarController: UITabBarController, UITabBarControllerDelegat
         override func viewDidLayoutSubviews() {
                 super.viewDidLayoutSubviews()
                 self.view.backgroundColor = .clear
-                // Re-assert the hidden state on every layout pass. Flutter owns the
-                // platform view's frame and resets it whenever it relayouts the
-                // UiKitView; without this, a hidden bar could silently become
-                // visible (and later be pushed off-screen by `show`), which is the
-                // root cause of the "navbar sometimes doesn't appear" bug.
+                // Re-assert visibility on every layout pass. Flutter owns the
+                // platform view's frame and can relayout the UiKitView at any time.
                 if isBarHidden {
                         self.view.isHidden = true
                         self.view.alpha = 0.0
+                } else {
+                        self.view.isHidden = false
+                        // Recover from a fade-in that never completed (alpha stuck at 0).
+                        if self.view.alpha == 0.0 && self.view.layer.animationKeys() == nil {
+                                self.view.alpha = 1.0
+                        }
                 }
         }
 
@@ -136,28 +139,37 @@ class LiquidGlassTabBarController: UITabBarController, UITabBarControllerDelegat
         /// rendering entirely (no glass-blur residue/artifacts during page
         /// transitions); showing restores it with a soft fade-in.
         private func setBarHidden(_ hidden: Bool, animated: Bool) {
-                isBarHidden = hidden
-                self.view.layer.removeAllAnimations()
                 if hidden {
+                        if isBarHidden { return }
+                        isBarHidden = true
+                        self.view.layer.removeAllAnimations()
                         self.view.isHidden = true
                         self.view.alpha = 0.0
-                } else {
-                        self.view.isHidden = false
-                        if animated {
-                                self.view.alpha = 0.0
-                                UIView.animate(withDuration: 0.2) {
-                                        self.view.alpha = 1.0
-                                }
-                        } else {
+                        return
+                }
+
+                // Already visible — do not reset alpha to 0 (avoids cold-start stuck bar).
+                if !isBarHidden && !self.view.isHidden && self.view.alpha >= 1.0 {
+                        return
+                }
+
+                isBarHidden = false
+                self.view.layer.removeAllAnimations()
+                self.view.isHidden = false
+                if animated {
+                        self.view.alpha = 0.0
+                        UIView.animate(withDuration: 0.2) {
                                 self.view.alpha = 1.0
                         }
+                } else {
+                        self.view.alpha = 1.0
                 }
         }
 
         private func configureAppearance() {
                 let appearance = UITabBarAppearance()
-                appearance.configureWithOpaqueBackground()
-                appearance.backgroundColor = .white
+                appearance.configureWithTransparentBackground()
+                appearance.backgroundColor = .clear
                 appearance.shadowColor = .clear
 
                 let itemAppearance = UITabBarItemAppearance()
@@ -197,6 +209,7 @@ class LiquidGlassTabBarController: UITabBarController, UITabBarControllerDelegat
                 }
 
                 if call.method == "show" {
+                    configureAppearance()
                     setBarHidden(false, animated: true)
                     result(nil)
                     return

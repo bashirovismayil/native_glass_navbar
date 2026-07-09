@@ -68,11 +68,8 @@ class NativeGlassNavBarState extends State<NativeGlassNavBar> {
 
   /// Native navbar'ı anında gizler.
   /// Başka bir sayfaya push yapmadan hemen önce çağır.
-  ///
-  /// `_isHidden` yalnızca "istenen durum"u tutar; native taraf idempotent
-  /// olduğu için komutu her zaman göndeririz (çift çağrı zararsızdır). Bu,
-  /// flag ile gerçek native durumun birbirinden kopmasını (desync) engeller.
   Future<void> hide() async {
+    if (_isHidden) return;
     _isHidden = true;
     await _invokeVisibility('hide');
   }
@@ -80,6 +77,7 @@ class NativeGlassNavBarState extends State<NativeGlassNavBar> {
   /// Native navbar'ı yumuşak fade-in ile gösterir.
   /// Pop ile geri döndükten sonra çağır.
   Future<void> show() async {
+    if (!_isHidden) return;
     _isHidden = false;
     await _invokeVisibility('show');
   }
@@ -90,6 +88,14 @@ class NativeGlassNavBarState extends State<NativeGlassNavBar> {
     try {
       await channel.invokeMethod(method);
     } catch (_) {}
+  }
+
+  void _syncVisibilityToNative() {
+    final channel = _channel;
+    if (channel == null) return;
+    if (_isHidden) {
+      channel.invokeMethod('hide');
+    }
   }
 
   // ========================
@@ -106,7 +112,19 @@ class NativeGlassNavBarState extends State<NativeGlassNavBar> {
     if (defaultTargetPlatform != TargetPlatform.iOS) {
       return false;
     }
-    return await LiquidGlassHelper.isLiquidGlassSupported();
+    const maxAttempts = 3;
+    for (var attempt = 0; attempt < maxAttempts; attempt++) {
+      try {
+        return await LiquidGlassHelper.isLiquidGlassSupported();
+      } on PlatformException {
+        if (attempt < maxAttempts - 1) {
+          await Future<void>.delayed(
+            Duration(milliseconds: 50 * (attempt + 1)),
+          );
+        }
+      }
+    }
+    return false;
   }
 
   Map<String, dynamic> _createParams() {
@@ -184,13 +202,10 @@ class NativeGlassNavBarState extends State<NativeGlassNavBar> {
                   widget.actionButton?.onTap();
                 }
               });
-              // Platform view yeniden oluşturulmuş olabilir (locale değişimi,
-              // IndexedStack rebuild vb.). Native taraf taze/görünür başlar;
-              // istenen durum "gizli" ise bunu yeniden uygula, aksi halde
-              // bir sonraki show() bar'ı yanlışlıkla gizleyebilir.
-              if (_isHidden) {
-                _channel!.invokeMethod('hide');
-              }
+              // Platform view yeniden oluşturulmuş olabilir. Native taraf taze
+              // başlar; yalnızca gizli durumdaysak hide uygula (show göndermek
+              // gereksiz fade-in tetikler).
+              _syncVisibilityToNative();
             },
           ),
         );
